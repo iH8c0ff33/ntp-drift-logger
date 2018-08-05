@@ -1,0 +1,9 @@
+[package]
+name = "ntp-drift-logger"
+description = "NTP clock drift logger"
+version = "0.0.1"
+authors = ["Daniele Monteleone <daniele.monteleone.it@gmail.com>"]
+
+[dependencies]
+chrono = "0.4"
+ntp = "0.5"
