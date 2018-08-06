@@ -1,0 +1,3 @@
+[submodule "ntp"]
+	path = ntp
+	url = https://github.com/iH8c0ff33/ntp.git
