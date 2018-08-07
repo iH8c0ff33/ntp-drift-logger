@@ -1,6 +1,7 @@
 extern crate chrono;
 extern crate ntp;
 
+use std::env;
 use std::io;
 use std::net::ToSocketAddrs;
 
@@ -32,9 +33,31 @@ fn get_stats<T: ToSocketAddrs>(address: T) -> io::Result<Stats> {
 }
 
 fn main() {
-    let address = "ntp1.inrim.it:123";
+    let args: Vec<String> = env::args().collect();
 
-    let stats = get_stats(address).unwrap();
+    let inrim = String::from("ntp1.inrim.it:123");
+    let address = args.get(1).unwrap_or(&inrim);
+
+    let mut iterations = args.get(2).map(|s| s.parse().unwrap()).unwrap_or(1);
+
+    println!("addr: {}, iters: {}", address, iterations);
+
+    let mut stats = get_stats(&address).unwrap();
+
+    for _ in 1..iterations {
+        match get_stats(&address) {
+            Ok(new) => {
+                stats.delay = stats.delay + new.delay;
+                stats.offset = stats.offset + new.offset;
+            }
+            _ => iterations -= 1,
+        };
+    }
+
+    println!("actual iters: {}", iterations);
+
+    stats.delay = stats.delay / iterations;
+    stats.offset = stats.offset / iterations;
 
     println!("stats: {:?}", stats);
 }
