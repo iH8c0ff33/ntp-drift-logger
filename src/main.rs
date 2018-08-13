@@ -38,7 +38,10 @@ fn main() {
     let inrim = String::from("ntp1.inrim.it:123");
     let address = args.get(1).unwrap_or(&inrim);
 
-    let mut iterations = args.get(2).map(|s| s.parse().unwrap()).unwrap_or(1);
+    let mut iterations = args
+        .get(2)
+        .map(|s| s.parse().expect("iterations must be a number"))
+        .unwrap_or(1);
 
     println!("addr: {}, iters: {}", address, iterations);
 
