@@ -39,9 +39,9 @@ impl Average for Stats {
         self.offset = self.offset + sample.offset;
     }
 
-    fn average(&mut self, iterations: i32) {
-        self.delay = self.delay / iterations;
-        self.offset = self.offset / iterations;
+    fn average(&mut self, samples: i32) {
+        self.delay = self.delay / samples;
+        self.offset = self.offset / samples;
     }
 }
 

@@ -13,7 +13,8 @@ use time::{get_stats, Average, Stats};
 #[derive(Clone)]
 pub struct Config {
     pub url: String,
-    pub iterations: i32,
+    pub samples: i32,
+    pub filename: String,
 }
 
 impl Config {
@@ -25,23 +26,33 @@ impl Config {
             None => String::from("ntp1.inrim.it:123"),
         };
 
-        let iterations = match args.next() {
+        let samples = match args.next() {
             Some(arg) => arg.parse().unwrap_or(1),
             None => 1,
         };
 
-        Ok(Config { url, iterations })
+        let filename = match args.next() {
+            Some(arg) => arg,
+            None => format!("drift.{}.csv", Local::now().timestamp_millis()),
+        };
+
+        Ok(Config {
+            url,
+            samples,
+            filename,
+        })
     }
 }
 
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let (file_tx, rx) = mpsc::channel::<Stats>();
-    thread::spawn(|| {
+    let filename = config.filename;
+    thread::spawn(move || {
         let mut file = OpenOptions::new()
             .append(true)
-            .open("drift.csv")
+            .open(&filename)
             .unwrap_or_else(|_| {
-                let mut file = File::create("drift.csv").expect("file: couldn't create file");
+                let mut file = File::create(&filename).expect("file: couldn't create file");
 
                 file.write(b"timestamp,offset,delay\n")
                     .expect("file: couldn't write header in file");
@@ -55,15 +66,15 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
         }
     });
 
-    let iterations = config.iterations;
+    let samples = config.samples;
     loop {
         let mut stats = get_stats(&config.url)?;
 
         let (tx, rx) = mpsc::channel();
         let url = config.url.clone();
         thread::spawn(move || {
-            println!("ntp: starting, {} iters", iterations);
-            for _ in 1..iterations {
+            println!("ntp: starting, {} iters", samples);
+            for _ in 1..samples {
                 if let Ok(current) = get_stats(&url) {
                     tx.send(current).expect("ntp: couldn't send sample");
                 }
@@ -74,7 +85,7 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
         let mut output = stdout();
         for sample in rx {
             stats.add_sample(&sample);
-            print!("\rmain: sample {}/{}", iterations, config.iterations);
+            print!("\rmain: sample {}/{}", iterations, config.samples);
             output.flush()?;
             iterations += 1;
         }
@@ -82,7 +93,7 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
 
         stats.average(iterations);
 
-        println!("Stats: {:?}, actual iters: {}", stats, iterations);
+        println!("Stats: {:?}, actual samples: {}", stats, iterations);
         file_tx.send(stats)?;
 
         println!("main: done, sleeping 30 secs...");

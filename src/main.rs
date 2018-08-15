@@ -13,7 +13,7 @@ fn main() {
         process::exit(1);
     });
 
-    println!("Querying {}, {} iterations", config.url, config.iterations);
+    println!("Querying {}, {} samples", config.url, config.samples);
 
     if let Err(err) = run(config) {
         eprintln!("Error: {}", err);
