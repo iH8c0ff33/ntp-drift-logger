@@ -2,13 +2,15 @@ use std::env::Args;
 use std::error::Error;
 use std::fs::File;
 use std::fs::OpenOptions;
-use std::io::Write;
+use std::io::{stdout, Write};
 use std::sync::mpsc;
 use std::thread;
+use std::time::Duration;
 
 use chrono::offset::Local;
 
 use time::{get_stats, Average, Stats};
+#[derive(Clone)]
 pub struct Config {
     pub url: String,
     pub iterations: i32,
@@ -33,8 +35,6 @@ impl Config {
 }
 
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
-    let mut stats = get_stats(&config.url)?;
-
     let (file_tx, rx) = mpsc::channel::<Stats>();
     thread::spawn(|| {
         let mut file = OpenOptions::new()
@@ -55,27 +55,37 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
         }
     });
 
-    let (tx, rx) = mpsc::channel();
-    thread::spawn(move || {
-        println!("ntp: starting, {} iters", config.iterations);
-        for _ in 1..config.iterations {
-            if let Ok(current) = get_stats(&config.url) {
-                tx.send(current).expect("ntp: couldn't send sample");
+    let iterations = config.iterations;
+    loop {
+        let mut stats = get_stats(&config.url)?;
+
+        let (tx, rx) = mpsc::channel();
+        let url = config.url.clone();
+        thread::spawn(move || {
+            println!("ntp: starting, {} iters", iterations);
+            for _ in 1..iterations {
+                if let Ok(current) = get_stats(&url) {
+                    tx.send(current).expect("ntp: couldn't send sample");
+                }
             }
+        });
+
+        let mut iterations = 1;
+        let mut output = stdout();
+        for sample in rx {
+            stats.add_sample(&sample);
+            print!("\rmain: sample {}/{}", iterations, config.iterations);
+            output.flush()?;
+            iterations += 1;
         }
-    });
+        println!();
 
-    let mut iterations = 0;
-    for sample in rx {
-        stats.add_sample(&sample);
-        println!("recv: {:?}", sample);
-        file_tx.send(sample).expect("main: couldn't send sample");
-        iterations += 1;
+        stats.average(iterations);
+
+        println!("Stats: {:?}, actual iters: {}", stats, iterations);
+        file_tx.send(stats)?;
+
+        println!("main: done, sleeping 30 secs...");
+        thread::sleep(Duration::from_secs(30));
     }
-
-    stats.average(iterations);
-
-    println!("Stats: {:?}, actual iters: {}", stats, iterations);
-
-    Ok(())
 }
