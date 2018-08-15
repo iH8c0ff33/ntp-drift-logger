@@ -1,5 +1,7 @@
 use std::env::Args;
 use std::error::Error;
+use std::sync::mpsc;
+use std::thread;
 
 use time::{get_stats, Average};
 pub struct Config {
@@ -26,19 +28,28 @@ impl Config {
 }
 
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
-    let mut iterations = config.iterations;
     let mut stats = get_stats(&config.url)?;
 
-    for _ in 1..iterations {
-        match get_stats(&config.url) {
-            Ok(new) => stats.add_sample(new),
-            _ => iterations -= 1,
-        };
+    let (tx, rx) = mpsc::channel();
+    thread::spawn(move || {
+        println!("thread: starting, {} iters", config.iterations);
+        for _ in 1..config.iterations {
+            if let Ok(current) = get_stats(&config.url) {
+                tx.send(current).expect("couldn't send value");
+            }
+        }
+    });
+
+    let mut iterations = 0;
+    for sample in rx {
+        stats.add_sample(&sample);
+        println!("recv: {:?}", sample);
+        iterations += 1;
     }
 
     stats.average(iterations);
 
-    println!("Stats: {:?}", stats);
+    println!("Stats: {:?}, actual iters: {}", stats, iterations);
 
     Ok(())
 }

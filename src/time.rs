@@ -11,7 +11,7 @@ pub fn local_time(timestamp: ntp::protocol::TimestampFormat) -> chrono::DateTime
 }
 
 pub trait Average {
-    fn add_sample(&mut self, Self);
+    fn add_sample(&mut self, &Self);
     fn average(&mut self, i32);
 }
 
@@ -22,7 +22,7 @@ pub struct Stats {
 }
 
 impl Average for Stats {
-    fn add_sample(&mut self, sample: Stats) {
+    fn add_sample(&mut self, sample: &Stats) {
         self.delay = self.delay + sample.delay;
         self.offset = self.offset + sample.offset;
     }
