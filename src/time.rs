@@ -1,3 +1,4 @@
+use std::fmt;
 use std::io;
 use std::net::ToSocketAddrs;
 
@@ -19,6 +20,17 @@ pub trait Average {
 pub struct Stats {
     delay: chrono::Duration,
     offset: chrono::Duration,
+}
+
+impl fmt::Display for Stats {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{},{}",
+            self.offset.num_milliseconds(),
+            self.delay.num_milliseconds()
+        )
+    }
 }
 
 impl Average for Stats {
