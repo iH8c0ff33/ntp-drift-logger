@@ -1,5 +1,7 @@
 use std::env::Args;
+use std::error::Error;
 
+use time::{get_stats, Average};
 pub struct Config {
     pub url: String,
     pub iterations: i32,
@@ -21,4 +23,22 @@ impl Config {
 
         Ok(Config { url, iterations })
     }
+}
+
+pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
+    let mut iterations = config.iterations;
+    let mut stats = get_stats(&config.url)?;
+
+    for _ in 1..iterations {
+        match get_stats(&config.url) {
+            Ok(new) => stats.add_sample(new),
+            _ => iterations -= 1,
+        };
+    }
+
+    stats.average(iterations);
+
+    println!("Stats: {:?}", stats);
+
+    Ok(())
 }
