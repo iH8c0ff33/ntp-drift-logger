@@ -58,3 +58,38 @@ pub fn get_stats<T: ToSocketAddrs>(address: T) -> io::Result<Stats> {
 
     Ok(Stats { delay, offset })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn add_sample_stats() {
+        let mut stats = Stats {
+            delay: chrono::Duration::milliseconds(123),
+            offset: chrono::Duration::milliseconds(128),
+        };
+
+        let add = Stats {
+            delay: chrono::Duration::milliseconds(61),
+            offset: chrono::Duration::milliseconds(64),
+        };
+
+        stats.add_sample(&add);
+
+        assert_eq!(stats.delay.num_milliseconds(), 184);
+        assert_eq!(stats.offset.num_milliseconds(), 192);
+    }
+
+    #[test]
+    fn pool_ntp_query() {
+        let address = "0.pool.ntp.org:123";
+        assert!(get_stats(address).is_ok());
+    }
+
+    #[test]
+    fn inrim_ntp_query() {
+        let address = "ntp1.inrim.it:123";
+        assert!(get_stats(address).is_ok());
+    }
+}
