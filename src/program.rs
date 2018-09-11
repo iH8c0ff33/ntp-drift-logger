@@ -21,11 +21,6 @@ impl Config {
     pub fn new(mut args: Args) -> Result<Config, &'static str> {
         args.next();
 
-        let url = match args.next() {
-            Some(arg) => arg,
-            None => String::from("ntp1.inrim.it:123"),
-        };
-
         let samples = match args.next() {
             Some(arg) => arg.parse().unwrap_or(1),
             None => 1,
@@ -34,6 +29,11 @@ impl Config {
         let filename = match args.next() {
             Some(arg) => arg,
             None => format!("drift.{}.csv", Local::now().timestamp_millis()),
+        };
+
+        let url = match args.next() {
+            Some(arg) => arg,
+            None => String::from("ntp1.inrim.it:123"),
         };
 
         Ok(Config {
