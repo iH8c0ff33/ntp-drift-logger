@@ -85,9 +85,9 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
         let mut output = stdout();
         for sample in rx {
             stats.add_sample(&sample);
+            iterations += 1;
             print!("\rmain: sample {}/{}", iterations, config.samples);
             output.flush()?;
-            iterations += 1;
         }
         println!();
 
